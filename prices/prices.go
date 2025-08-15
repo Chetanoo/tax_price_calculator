@@ -23,10 +23,11 @@ func NewTaxIncludedPriceJob(iom iomanager.IOManager, taxRate float64) *TaxInclud
 
 type ResultMap map[string]string
 
-func (job *TaxIncludedPriceJob) Process() error {
+func (job *TaxIncludedPriceJob) Process(doneChan chan bool, errChan chan error) {
 	err := job.LoadData()
 	if err != nil {
-		return err
+		errChan <- err
+		return
 	}
 	resultMap := make(ResultMap)
 	for _, price := range job.InputPrices {
@@ -34,7 +35,8 @@ func (job *TaxIncludedPriceJob) Process() error {
 		resultMap[fmt.Sprintf("%.2f", price)] = fmt.Sprintf("%.2f", taxIncludedPrice)
 	}
 	job.TaxIncludedPrices = resultMap
-	return job.IOManager.WriteResult(job)
+	job.IOManager.WriteResult(job)
+	doneChan <- true
 }
 
 func (job *TaxIncludedPriceJob) LoadData() error {
